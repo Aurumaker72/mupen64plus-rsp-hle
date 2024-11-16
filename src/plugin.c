@@ -39,6 +39,8 @@
 
 #include "osal_dynamiclib.h"
 
+#include "mupen_rsp.h"
+
 #define CONFIG_API_VERSION       0x020100
 #define CONFIG_PARAM_VERSION     1.00
 
@@ -52,6 +54,7 @@
 #define RSP_HLE_CONFIG_HLE_GFX  "DisplayListToGraphicsPlugin"
 #define RSP_HLE_CONFIG_HLE_AUD  "AudioListToAudioPlugin"
 
+#define PLUGIN_NAME "Hacktarux/Azimer High-Level Emulation RSP Plugin"
 
 #define VERSION_PRINTF_SPLIT(x) (((x) >> 16) & 0xffff), (((x) >> 8) & 0xff), ((x) & 0xff)
 
@@ -413,12 +416,21 @@ EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
         *APIVersion = RSP_PLUGIN_API_VERSION;
 
     if (PluginNamePtr != NULL)
-        *PluginNamePtr = "Hacktarux/Azimer High-Level Emulation RSP Plugin";
+        *PluginNamePtr = PLUGIN_NAME;
 
     if (Capabilities != NULL)
         *Capabilities = 0;
 
     return M64ERR_SUCCESS;
+}
+
+EXPORT void GetDllInfo(LEGACY_PLUGIN_INFO* PluginInfo)
+{
+    PluginInfo->Version = 0x0101;
+    PluginInfo->Type = LEGACY_PLUGIN_TYPE_RSP;
+    strcpy(PluginInfo->Name, PLUGIN_NAME);
+    PluginInfo->NormalMemory = 1;
+    PluginInfo->MemoryBswaped = 1;
 }
 
 EXPORT unsigned int CALL DoRspCycles(unsigned int Cycles)
