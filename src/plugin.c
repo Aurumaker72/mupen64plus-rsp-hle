@@ -39,7 +39,10 @@
 
 #include "osal_dynamiclib.h"
 
-#include "mupen_rsp.h"
+// Enables support for non-plus mupen64. Requires a Windows environment.
+#ifdef LEGACY_MUPEN_SUPPORT
+#include "legacy_mupen_rsp.h"
+#endif
 
 #define CONFIG_API_VERSION       0x020100
 #define CONFIG_PARAM_VERSION     1.00
@@ -424,6 +427,24 @@ EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
     return M64ERR_SUCCESS;
 }
 
+EXPORT unsigned int CALL DoRspCycles(unsigned int Cycles)
+{
+    hle_execute(&g_hle);
+    return Cycles;
+}
+
+EXPORT void CALL RomClosed(void)
+{
+    g_hle.cached_ucodes.count = 0;
+
+    /* notify fallback plugin */
+    if (l_RomClosed) {
+        l_RomClosed();
+    }
+}
+
+#ifdef LEGACY_MUPEN_SUPPORT
+
 EXPORT void GetDllInfo(LEGACY_PLUGIN_INFO* PluginInfo)
 {
     PluginInfo->Version = 0x0101;
@@ -433,37 +454,71 @@ EXPORT void GetDllInfo(LEGACY_PLUGIN_INFO* PluginInfo)
     PluginInfo->MemoryBswaped = 1;
 }
 
-EXPORT unsigned int CALL DoRspCycles(unsigned int Cycles)
+EXPORT void CALL InitiateRSP(LEGACY_RSP_INFO Rsp_Info, unsigned int* CycleCount)
 {
-    hle_execute(&g_hle);
-    return Cycles;
+    hle_init(&g_hle,
+        Rsp_Info.RDRAM,
+        Rsp_Info.DMEM,
+        Rsp_Info.IMEM,
+        Rsp_Info.MI_INTR_REG,
+        Rsp_Info.SP_MEM_ADDR_REG,
+        Rsp_Info.SP_DRAM_ADDR_REG,
+        Rsp_Info.SP_RD_LEN_REG,
+        Rsp_Info.SP_WR_LEN_REG,
+        Rsp_Info.SP_STATUS_REG,
+        Rsp_Info.SP_DMA_FULL_REG,
+        Rsp_Info.SP_DMA_BUSY_REG,
+        Rsp_Info.SP_PC_REG,
+        Rsp_Info.SP_SEMAPHORE_REG,
+        Rsp_Info.DPC_START_REG,
+        Rsp_Info.DPC_END_REG,
+        Rsp_Info.DPC_CURRENT_REG,
+        Rsp_Info.DPC_STATUS_REG,
+        Rsp_Info.DPC_CLOCK_REG,
+        Rsp_Info.DPC_BUFBUSY_REG,
+        Rsp_Info.DPC_PIPEBUSY_REG,
+        Rsp_Info.DPC_TMEM_REG,
+        NULL);
+
+    l_CheckInterrupts = Rsp_Info.CheckInterrupts;
+    l_ProcessDlistList = Rsp_Info.ProcessDlistList;
+    l_ProcessAlistList = Rsp_Info.ProcessAlistList;
+    l_ProcessRdpList = Rsp_Info.ProcessRdpList;
+    l_ShowCFB = Rsp_Info.ShowCFB;
+
+    setup_rsp_fallback("");
+
+    g_hle.hle_gfx = 1;
+    g_hle.hle_aud = 0;
 }
+
+#else
 
 EXPORT void CALL InitiateRSP(RSP_INFO Rsp_Info, unsigned int* CycleCount)
 {
     hle_init(&g_hle,
-             Rsp_Info.RDRAM,
-             Rsp_Info.DMEM,
-             Rsp_Info.IMEM,
-             Rsp_Info.MI_INTR_REG,
-             Rsp_Info.SP_MEM_ADDR_REG,
-             Rsp_Info.SP_DRAM_ADDR_REG,
-             Rsp_Info.SP_RD_LEN_REG,
-             Rsp_Info.SP_WR_LEN_REG,
-             Rsp_Info.SP_STATUS_REG,
-             Rsp_Info.SP_DMA_FULL_REG,
-             Rsp_Info.SP_DMA_BUSY_REG,
-             Rsp_Info.SP_PC_REG,
-             Rsp_Info.SP_SEMAPHORE_REG,
-             Rsp_Info.DPC_START_REG,
-             Rsp_Info.DPC_END_REG,
-             Rsp_Info.DPC_CURRENT_REG,
-             Rsp_Info.DPC_STATUS_REG,
-             Rsp_Info.DPC_CLOCK_REG,
-             Rsp_Info.DPC_BUFBUSY_REG,
-             Rsp_Info.DPC_PIPEBUSY_REG,
-             Rsp_Info.DPC_TMEM_REG,
-             NULL);
+        Rsp_Info.RDRAM,
+        Rsp_Info.DMEM,
+        Rsp_Info.IMEM,
+        Rsp_Info.MI_INTR_REG,
+        Rsp_Info.SP_MEM_ADDR_REG,
+        Rsp_Info.SP_DRAM_ADDR_REG,
+        Rsp_Info.SP_RD_LEN_REG,
+        Rsp_Info.SP_WR_LEN_REG,
+        Rsp_Info.SP_STATUS_REG,
+        Rsp_Info.SP_DMA_FULL_REG,
+        Rsp_Info.SP_DMA_BUSY_REG,
+        Rsp_Info.SP_PC_REG,
+        Rsp_Info.SP_SEMAPHORE_REG,
+        Rsp_Info.DPC_START_REG,
+        Rsp_Info.DPC_END_REG,
+        Rsp_Info.DPC_CURRENT_REG,
+        Rsp_Info.DPC_STATUS_REG,
+        Rsp_Info.DPC_CLOCK_REG,
+        Rsp_Info.DPC_BUFBUSY_REG,
+        Rsp_Info.DPC_PIPEBUSY_REG,
+        Rsp_Info.DPC_TMEM_REG,
+        NULL);
 
     l_CheckInterrupts = Rsp_Info.CheckInterrupts;
     l_ProcessDlistList = Rsp_Info.ProcessDlistList;
@@ -482,12 +537,4 @@ EXPORT void CALL InitiateRSP(RSP_INFO Rsp_Info, unsigned int* CycleCount)
     }
 }
 
-EXPORT void CALL RomClosed(void)
-{
-    g_hle.cached_ucodes.count = 0;
-
-    /* notify fallback plugin */
-    if (l_RomClosed) {
-        l_RomClosed();
-    }
-}
+#endif
