@@ -58,6 +58,8 @@
 #define RSP_HLE_CONFIG_HLE_AUD  "AudioListToAudioPlugin"
 
 #define PLUGIN_NAME "Hacktarux/Azimer High-Level Emulation RSP Plugin"
+#define PLUGIN_VERSION "1.0.0"
+#define PLUGIN_FULL_NAME (PLUGIN_NAME " " PLUGIN_VERSION)
 
 #define VERSION_PRINTF_SPLIT(x) (((x) >> 16) & 0xffff), (((x) >> 8) & 0xff), ((x) & 0xff)
 
@@ -449,9 +451,23 @@ EXPORT void GetDllInfo(LEGACY_PLUGIN_INFO* PluginInfo)
 {
     PluginInfo->Version = 0x0101;
     PluginInfo->Type = LEGACY_PLUGIN_TYPE_RSP;
-    strcpy(PluginInfo->Name, PLUGIN_NAME);
+    strcpy(PluginInfo->Name, PLUGIN_FULL_NAME);
     PluginInfo->NormalMemory = 1;
     PluginInfo->MemoryBswaped = 1;
+}
+
+EXPORT void DllAbout(void* hParent)
+{
+    MessageBox(hParent, PLUGIN_NAME " with Mupen64 support.", PLUGIN_FULL_NAME, MB_ICONINFORMATION);
+}
+
+EXPORT void DllConfig(void* hParent)
+{
+    MessageBox(hParent, "No config available.", PLUGIN_FULL_NAME, MB_ICONINFORMATION);
+}
+
+EXPORT void DllTest(void* hParent)
+{
 }
 
 EXPORT void CALL InitiateRSP(LEGACY_RSP_INFO Rsp_Info, unsigned int* CycleCount)
